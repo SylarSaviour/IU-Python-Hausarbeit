@@ -35,36 +35,38 @@ START: pip install and import required libraries
 import pandas as pd
 import sqlalchemy as db
 import sqlite3
-import csv
 import matplotlib.pyplot as plt
 
 """
 GET csv data into python objects. Datasetes should be stored in program folder.
 """
 
-# Reading data from csv files using pandas
-# data_train = pd.read_csv('Datensatz/train.csv')
-# data_test = pd.read_csv('Datensatz/test.csv')
-# data_ideal = pd.read_csv('Datensatz/ideal.csv')
-
 """
 With the following code we create an sqlite database in project folder / 
 connect th program to the database and create sqlite tables /
+
+! ! ! ATTENTION ! ! !
+Please store the "Datensatz" folder with the provides 3 cvs files "train", "ideal" and "test" in the project folder.
 """
-# create inital sqlite database in project folder
-sqlite3.connect("Hausarbeit.db")
+
+# USER can enter the name of the database that will be connected or created if does not already exist
+db_input = str(input("Enter Database name that will be connected or created: "))
+db_name = db_input + ".db"
+
 
 class SQL_Data():
     """
     This class controlles the creation, access and update of sqlite tables
     """
+    sqlite3.connect(db_name)
+    print(f"Database '{db_name}' created/connected")
 
     # connect database using sqlite3 to modify existing sql tables
-    con = sqlite3.connect("Hausarbeit.db")
+    con = sqlite3.connect(db_name)
     cur = con.cursor()
 
     # connect database using sqlalchemy for initial table creation from csv
-    con_str = "sqlite:///Hausarbeit.db"
+    con_str = f"sqlite:///{db_name}"
     engine = db.create_engine(con_str)
     connection = engine.connect()
     def create_sql_table_from_csv(self, csv_path, sql_tablename):
@@ -74,10 +76,11 @@ class SQL_Data():
         """
         csv_data = pd.read_csv(f'{csv_path}')
         try:
-            csv_data.to_sql(sql_tablename, self.engine, index=False, if_exists="fail") == ValueError
+            csv_data.to_sql(sql_tablename, self.engine, index=False, if_exists="fail")
+            print(f"tabel '{sql_tablename}' has been created")
             pass
         except:
-            print(f"sql table with name '{sql_tablename}' already exist and will not be replaced")
+            print(f"SQL table '{sql_tablename}' already exist")
             pass
         finally:
             pass
@@ -92,7 +95,7 @@ class SQL_Data():
             self.cur.execute(f"ALTER TABLE {table_name} ADD {new_column_name}")
             pass
         except:
-            print(f"new column '{new_column_name}' in table '{table_name}' already exist and will not be replaced")
+            print(f"new column '{new_column_name}' in table '{table_name}' already exist")
             pass
         finally:
             pass
@@ -105,8 +108,15 @@ class SQL_Data():
         :param column_name:
         :return:
         """
-        self.cur.execute(f"UPDATE {table_name} SET {column_name_entry}={value} WHERE {column_name_x}={column_value_x} AND {column_name_y}={column_value_y}")
-        self.con.commit()
+        self.cur.execute(f"SELECT * FROM {table_name} WHERE {column_name_x}={column_value_x}")
+        result = self.cur.fetchall()
+        if not result:
+            raise ValueError("no matching criteria to update values in db")
+        else:
+            self.cur.execute(f"UPDATE {table_name} SET {column_name_entry}={value} WHERE {column_name_x}={column_value_x} AND {column_name_y}={column_value_y}")
+            self.con.commit()
+            print("Data Update")
+
 
     def select_values(self, table_name, column_name, value):
         """
@@ -119,6 +129,17 @@ class SQL_Data():
 
         for row in result:
             print(row)
+    def select_table_values(self, table_name):
+        """
+        with this funktion data from a databse can be selected
+        :param column_name:
+        :return:
+        """
+        self.cur.execute(f"SELECT * FROM {table_name}")
+        result = self.cur.fetchall()
+
+        for row in result:
+            print(row)
 
 
 # Create sqlite database by entering existing data object and to be created table name as string
@@ -127,32 +148,28 @@ data.create_sql_table_from_csv(csv_path="Datensatz/train.csv", sql_tablename="tr
 data.create_sql_table_from_csv(csv_path="Datensatz/ideal.csv", sql_tablename="ideal")
 data.create_sql_table_from_csv(csv_path="Datensatz/test.csv", sql_tablename="test")
 
-# Add new column to test table that did not exist before, Exception handling required
+# Add new column to test table that did not exist before
 data.add_table_column(table_name="test", new_column_name="Delta_Y")
 data.add_table_column(table_name="test", new_column_name="Nummer_der_Idealen_Funktion")
 
 
+"""
+Some TESTING Code for Database interactions
+"""
 # Test the data update function
 # data.update_values(table_name="test",
 #                    column_name_entry="Nummer_der_Idealen_Funktion",
 #                    value=1,
-#                    column_value_x=-11.1,
-#                    column_value_y=-11.129228)
+#                    column_value_x=-300,
+#                    column_value_y=34.25082)
 
 #Test data selection
 # data.select_values(table_name="test", column_name="Nummer_der_Idealen_Funktion", value=1)
-
-
-
-
+# data.select_table_values(table_name="test")
 
 """
-COMPUTE_1: identify the four ideal function from data_ideal that fit best to data_train / 
-where the deviations are less than sqrt(2)
+With the following code we will identify the 4 ideal function and save them in a new dataset
 """
 
-# idealfunc_1 = none
-# idealfunc_2 = none
-# idealfunc_3 = none
-# idealfunc_4 = none
+
 
