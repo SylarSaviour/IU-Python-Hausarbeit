@@ -8,6 +8,7 @@ import math
 import sqlalchemy as db
 import sqlite3
 import matplotlib.pyplot as plt
+from matplotlib import style
 
 """
 This program consists of 3 Steps:
@@ -37,10 +38,6 @@ Structure of the Program:
 - Unite test wherever this is suitable
 - Full program documentation using docstrings
 - Use Guit for version control
-"""
-
-"""
-GET csv data into python objects. Datasets should be stored in program folder.
 """
 
 """
@@ -111,8 +108,10 @@ class SqlData:
         finally:
             pass
 
-    def update_values(self, table_name, column_name_entry, value=None, column_name_x='x',
-                      column_value_x=None, column_name_y='y', column_value_y=None):
+    def update_values(self, table_name,
+                      column_name_entry, value=None,
+                      column_name_x='x', column_value_x=None,
+                      column_name_y='y', column_value_y=None):
 
         """
         with this function data can be inserted in a sqlite database table
@@ -138,7 +137,7 @@ class SqlData:
                 f"WHERE {column_name_x}={column_value_x} "
                 f"AND {column_name_y}={column_value_y}")
             self.con.commit()
-            print(f"Data Update in table: '{table_name}' column: '{column_name_entry}' value: {value}")
+            # print(f"Data Update in table: '{table_name}' column: '{column_name_entry}' value: {value}")
 
     def select_values(self, table_name, column_name, value):
 
@@ -153,13 +152,13 @@ class SqlData:
         self.cur.execute(f"SELECT * FROM {table_name} WHERE {column_name}={value}")
         self.cur.fetchall()
 
-    def select_column(self, table_name, column_name):
+    def select_one_column(self, table_name, column_name):
 
         """
         with this function a single column from a database can be selected
         :param table_name: name of the sql table as string
         :param column_name: name of column condition as string
-        :return: ?????????????????????????????????????????????????????
+        :return: list of values of selected column
         """
 
         self.cur.execute(f"SELECT {column_name} FROM {table_name}")
@@ -169,7 +168,43 @@ class SqlData:
         for row in result:
             c_list += row
 
-        return list
+        return c_list
+
+    def select_two_column(self, table_name,
+                          column_name_1, column_name_2):
+
+        """
+        with this function two columns from a database can be selected
+        :param table_name: name of the sql table as string
+        :param column_name_1: name of first column to be returned as string
+        :param column_name_2: name of second column to be returned as string
+        :return: list of values of selected column
+        """
+
+        self.cur.execute(f"SELECT {column_name_1}, {column_name_2} "
+                             f"FROM {table_name}")
+
+        return self.cur.fetchall()
+
+    def select_two_column_cond(self, table_name,
+                               column_name_1, column_name_2,
+                               column_name_condition="?", column_value_condition="?"):
+
+        """
+        with this function two columns from a database can be selected with a condition statement
+        :param table_name: name of the sql table as string
+        :param column_name_1: name of first column to be returned as string
+        :param column_name_2: name of second column to be returned as string
+        :param column_name_condition: column name of condition as string
+        :param column_value_condition: column value as condition for selection
+        :return: list of values of selected column
+        """
+
+        self.cur.execute(f"SELECT {column_name_1}, "
+                         f"{column_name_2} FROM {table_name} "
+                         f"WHERE {column_name_condition}={column_value_condition}")
+
+        return self.cur.fetchall()
 
     def select_table_values(self, table_name):
 
@@ -180,10 +215,7 @@ class SqlData:
         """
 
         self.cur.execute(f"SELECT * FROM {table_name}")
-        result = self.cur.fetchall()
-
-        for row in result:
-            print(row)
+        return self.cur.fetchall()
 
     def pd_from_sql(self, table_name):
 
@@ -195,6 +227,17 @@ class SqlData:
 
         df = pd.read_sql(sql=table_name, con=self.con_str)
         return df
+
+
+# Create sqlite database by entering existing data object and to be created table name as string
+data = SqlData()
+data.create_sql_table_from_csv(csv_path="Datensatz/train.csv", sql_table_name="train")
+data.create_sql_table_from_csv(csv_path="Datensatz/ideal.csv", sql_table_name="ideal")
+data.create_sql_table_from_csv(csv_path="Datensatz/test.csv", sql_table_name="test")
+
+# Add new column to test table that did not exist before
+data.add_table_column(table_name="test", new_column_name="Delta_Y", column_type="REAL")
+data.add_table_column(table_name="test", new_column_name="Nummer_der_Idealen_Funktion", column_type="TEXT")
 
 
 class Compute(SqlData):
@@ -297,18 +340,56 @@ class Compute(SqlData):
         print("Done")
 
 
-# Create sqlite database by entering existing data object and to be created table name as string
-data = SqlData()
-data.create_sql_table_from_csv(csv_path="Datensatz/train.csv", sql_table_name="train")
-data.create_sql_table_from_csv(csv_path="Datensatz/ideal.csv", sql_table_name="ideal")
-data.create_sql_table_from_csv(csv_path="Datensatz/test.csv", sql_table_name="test")
-
-# Add new column to test table that did not exist before
-data.add_table_column(table_name="test", new_column_name="Delta_Y", column_type="REAL")
-data.add_table_column(table_name="test", new_column_name="Nummer_der_Idealen_Funktion", column_type="TEXT")
-
 # Identify the 4 ideal functions
 df_ideal_4f = Compute().get_4_ideal_functions()
 
+
+# Create new SQL Table with 4 functions
+
+
 # Allocate ideal function and delta value to test data and update sql table
 comp = Compute().ideal_2_test()
+
+
+"""
+VISUALIZATION
+"""
+
+# test function 1 x/y values
+train_x = (SqlData().select_one_column(table_name="train", column_name="x"))
+train_y1 = (SqlData().select_one_column(table_name="train", column_name="y1"))
+train_y2 = (SqlData().select_one_column(table_name="train", column_name="y2"))
+train_y3 = (SqlData().select_one_column(table_name="train", column_name="y3"))
+train_y4 = (SqlData().select_one_column(table_name="train", column_name="y4"))
+
+test_x = (SqlData().select_one_column(table_name="test", column_name="x"))
+test_y = (SqlData().select_one_column(table_name="test", column_name="y"))
+
+# Style
+style.use('ggplot')
+
+# Plot figure mit einem Subplot (axes) erzeugen
+fig, (ax1, ax2, ax3) = plt.subplots(3)
+
+# Lineplot erzeugen
+ax1.plot(train_x, train_y1, label="Train 1", linewidth=2)
+ax1.plot(train_x, train_y2, label="Train 2", linewidth=2)
+ax1.plot(train_x, train_y3, label="Train 3", linewidth=2)
+ax1.plot(train_x, train_y4, label="Train 4", linewidth=2)
+
+ax3.scatter(test_x, test_y, label="Test Data")
+
+# Legende hinzufügen
+ax1.legend()
+ax3.legend()
+
+# Grid hinzufügen
+ax1.grid(True, color="k")
+ax3.grid(True, color="k")
+
+# Achsen beschriften
+plt.ylabel("y axis")
+plt.xlabel("x axis")
+
+# Plot anzeigen
+plt.show()
