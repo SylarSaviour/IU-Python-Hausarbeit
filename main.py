@@ -88,6 +88,25 @@ class SqlData:
         finally:
             pass
 
+    def create_sql_table_from_dataframe(self, dataframe, sql_table_name):
+
+        """
+        with this function a sql table can be created from a csv file
+         :param dataframe: dataframe object to be transformed
+         :param sql_table_name: name of the table that will be created as string
+         :return: dataframe file will be transformed into a sql_table
+        """
+
+        try:
+            dataframe.to_sql(sql_table_name, self.engine, index=False, if_exists="fail")
+            print(f"tabel '{sql_table_name}' has been created")
+            pass
+        except:
+            print(f"SQL table '{sql_table_name}' already exist")
+            pass
+        finally:
+            pass
+
     def add_table_column(self, table_name, new_column_name, column_type):
 
         """
@@ -139,6 +158,18 @@ class SqlData:
             self.con.commit()
             # print(f"Data Update in table: '{table_name}' column: '{column_name_entry}' value: {value}")
 
+    def select_column_names(self, table_name):
+
+        """
+        with this function specific data from a database can be selected
+        :param table_name: name of the sql table as string
+        :return: list with column names
+        """
+        cursor = self.con.execute(f'select * from {table_name}')
+        names = [description[0] for description in cursor.description]
+
+        return names
+
     def select_values(self, table_name, column_name, value):
 
         """
@@ -169,6 +200,49 @@ class SqlData:
             c_list += row
 
         return c_list
+
+    def select_one_column_cond(self, table_name,
+                               column_name,
+                               column_name_condition="?", column_value_condition="?"):
+
+        """
+        with this function two columns from a database can be selected with a condition statement
+        :param table_name: name of the sql table as string
+        :param column_name: name of first column to be returned as string
+        :param column_name_condition: column name of condition as string
+        :param column_value_condition: column value as condition for selection
+        :return: list of values of selected column
+        """
+
+        self.cur.execute(f"SELECT {column_name} "
+                         f"FROM {table_name} "
+                         f"WHERE {column_name_condition}={column_value_condition}")
+
+        return self.cur.fetchall()
+
+    def select_one_column_cond_null(self, table_name, column_name, isnull, column_name_condition="?"):
+
+        """
+        with this function two columns from a database can be selected with a condition statement
+        :param table_name: name of the sql table as string
+        :param column_name: name of first column to be returned as string
+        :param isnull: requires 'true' or 'false' input to determine if Null values should be shown or not
+        :param column_name_condition: column name of condition as string
+        :return: list of NULL values of selected column
+        """
+
+        if isnull == "true":
+            self.cur.execute(f"SELECT {column_name} "
+                             f"FROM {table_name} "
+                             f"WHERE {column_name_condition} IS NULL")
+        elif isnull == "false":
+            self.cur.execute(f"SELECT {column_name} "
+                             f"FROM {table_name} "
+                             f"WHERE {column_name_condition} IS NOT NULL")
+        else:
+            raise ValueError("Wrong Argument: Must be 'true' or 'false'")
+
+        return self.cur.fetchall()
 
     def select_two_column(self, table_name,
                           column_name_1, column_name_2):
@@ -343,10 +417,11 @@ class Compute(SqlData):
 # Identify the 4 ideal functions
 df_ideal_4f = Compute().get_4_ideal_functions()
 
+# Create new SQL Table with 4 ideal functions
+ideal_SQL = SqlData().create_sql_table_from_dataframe(dataframe=df_ideal_4f, sql_table_name="ideal_4")
 
-# Create new SQL Table with 4 functions
-
-
+# list of the f ideal functions
+ideal_f = SqlData().select_column_names(table_name="ideal_4")
 # Allocate ideal function and delta value to test data and update sql table
 comp = Compute().ideal_2_test()
 
@@ -356,20 +431,40 @@ VISUALIZATION
 """
 
 # test function 1 x/y values
-train_x = (SqlData().select_one_column(table_name="train", column_name="x"))
-train_y1 = (SqlData().select_one_column(table_name="train", column_name="y1"))
-train_y2 = (SqlData().select_one_column(table_name="train", column_name="y2"))
-train_y3 = (SqlData().select_one_column(table_name="train", column_name="y3"))
-train_y4 = (SqlData().select_one_column(table_name="train", column_name="y4"))
+train_x = SqlData().select_one_column(table_name="train", column_name="x")
+train_y1 = SqlData().select_one_column(table_name="train", column_name="y1")
+train_y2 = SqlData().select_one_column(table_name="train", column_name="y2")
+train_y3 = SqlData().select_one_column(table_name="train", column_name="y3")
+train_y4 = SqlData().select_one_column(table_name="train", column_name="y4")
 
-test_x = (SqlData().select_one_column(table_name="test", column_name="x"))
-test_y = (SqlData().select_one_column(table_name="test", column_name="y"))
+# ideal function 1 x/y values
+ideal_x = SqlData().select_one_column(table_name="ideal_4", column_name="x")
+ideal_y1 = SqlData().select_one_column(table_name="ideal_4", column_name=f"{''.join(ideal_f[1:2])}")
+ideal_y2 = SqlData().select_one_column(table_name="ideal_4", column_name=f"{''.join(ideal_f[2:3])}")
+ideal_y3 = SqlData().select_one_column(table_name="ideal_4", column_name=f"{''.join(ideal_f[3:4])}")
+ideal_y4 = SqlData().select_one_column(table_name="ideal_4", column_name=f"{''.join(ideal_f[4:5])}")
+
+# test function 1 x/y values
+test_x_ok = SqlData().select_one_column_cond_null(table_name="test", column_name="x",
+                                                  column_name_condition="Nummer_der_Idealen_Funktion",
+                                                  isnull="false")
+test_y_ok = SqlData().select_one_column_cond_null(table_name="test", column_name="y",
+                                                  column_name_condition="Nummer_der_Idealen_Funktion",
+                                                  isnull="false",)
+
+test_x_not_ok = SqlData().select_one_column_cond_null(table_name="test", column_name="x",
+                                                      column_name_condition="Nummer_der_Idealen_Funktion",
+                                                      isnull="true")
+test_y_not_ok = SqlData().select_one_column_cond_null(table_name="test", column_name="y",
+                                                      column_name_condition="Nummer_der_Idealen_Funktion",
+                                                      isnull="true",)
+
 
 # Style
 style.use('ggplot')
 
-# Plot figure mit einem Subplot (axes) erzeugen
-fig, (ax1, ax2, ax3) = plt.subplots(3)
+# Plot figure mit zwei Subplot (axes) erzeugen
+fig, (ax1, ax2) = plt.subplots(2)
 
 # Lineplot erzeugen
 ax1.plot(train_x, train_y1, label="Train 1", linewidth=2)
@@ -377,15 +472,23 @@ ax1.plot(train_x, train_y2, label="Train 2", linewidth=2)
 ax1.plot(train_x, train_y3, label="Train 3", linewidth=2)
 ax1.plot(train_x, train_y4, label="Train 4", linewidth=2)
 
-ax3.scatter(test_x, test_y, label="Test Data")
+ax2.plot(train_x, ideal_y1, label=f"{''.join(ideal_f[1:2])}", linewidth=2)
+ax2.plot(train_x, ideal_y2, label=f"{''.join(ideal_f[2:3])}", linewidth=2)
+ax2.plot(train_x, ideal_y3, label=f"{''.join(ideal_f[2:3])}", linewidth=2)
+ax2.plot(train_x, ideal_y4, label=f"{''.join(ideal_f[4:5])}", linewidth=2)
+
+ax2.scatter(test_x_ok, test_y_ok, label="Test Data")
+ax2.scatter(test_x_not_ok, test_y_not_ok, label="Test Data")
 
 # Legende hinzufügen
 ax1.legend()
-ax3.legend()
+ax2.legend()
+
 
 # Grid hinzufügen
 ax1.grid(True, color="k")
-ax3.grid(True, color="k")
+ax2.grid(True, color="k")
+
 
 # Achsen beschriften
 plt.ylabel("y axis")
