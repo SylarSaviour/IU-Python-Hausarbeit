@@ -8,7 +8,6 @@ import math
 import sqlalchemy as db
 import sqlite3
 import matplotlib.pyplot as plt
-from matplotlib import style
 
 """
 This program consists of 3 Steps:
@@ -291,6 +290,17 @@ class SqlData:
         self.cur.execute(f"SELECT * FROM {table_name}")
         return self.cur.fetchall()
 
+    def select_table_rows(self, table_name):
+
+        """
+        with this function data from an entire sql table can be selected
+        :param table_name: name of the table
+        :return: ?????????????????????????????????????????????????????
+        """
+
+        self.cur.execute(f"SELECT * FROM {table_name}")
+        return len(self.cur.fetchall())
+
     def pd_from_sql(self, table_name):
 
         """
@@ -341,6 +351,9 @@ class Compute(SqlData):
         :return: pandas dataframe 'df_4I' with 4 ideal functions
         """
 
+        # Get number of columns to iterate through
+        row_count = SqlData().select_table_rows(table_name="train")
+
         for t in self.functions_train[1:]:
             threshold = 10
 
@@ -349,9 +362,9 @@ class Compute(SqlData):
                 function_check = i
 
                 self.df_train['check'] = np.where((self.df_train[function_train] - self.df_ideal[function_check]
-                                                   <= math.sqrt(2) / 2) &
+                                                   <= math.sqrt(2)) &
                                                   (self.df_train[function_train] - self.df_ideal[function_check]
-                                                   >= (math.sqrt(2) / 2) * -1),
+                                                   >= (math.sqrt(2)) * -1),
                                                   'True', 'False')
 
                 self.df_train['dif'] = self.df_train[function_train] - self.df_ideal[function_check]
@@ -359,7 +372,7 @@ class Compute(SqlData):
                 result = self.df_train[self.df_train['check'] == 'True'].count()
                 sum_dif = abs(self.df_train['dif'].sum())
 
-                if result['check'] == 400:
+                if result['check'] == row_count:
 
                     if sum_dif < threshold:
                         threshold = sum_dif
@@ -382,9 +395,10 @@ class Compute(SqlData):
         df_ideal_help = pd.merge(self.df_test, df_ideal_4f)
         df_ideal_help = df_ideal_help.drop(columns=["y", "Delta_Y", "Nummer_der_Idealen_Funktion"], axis=1)
         function_ideal_help = list(df_ideal_help.columns)
-        # print(function_ideal_help[1:])
+        row_count = SqlData().select_table_rows(table_name="test")
+
         count = 0
-        for f in range(100):
+        for f in range(row_count):
             row = self.df_test.iloc[f]
             x = row["x"]
             y = row["y"]
@@ -395,7 +409,7 @@ class Compute(SqlData):
                 id_y = id_column[i]
                 dif = abs(id_y - y)
                 dif_ = float(dif.to_string(index=False))
-                if dif_ < (math.sqrt(2) / 2):
+                if dif_ < (math.sqrt(2)):
                     if dif_ < threshold:
                         count += 1
                         threshold = dif_
@@ -411,8 +425,8 @@ class Compute(SqlData):
                                                 column_name_entry="Nummer_der_Idealen_Funktion", value=i[1:])
                     else:
                         pass
-        print("Done")
-
+        print(f"Done {count} test functions allocated to one of the 4 ideal functions"
+              f"{row_count-count} test functions out of range (sqr2)")
 
 # Identify the 4 ideal functions
 df_ideal_4f = Compute().get_4_ideal_functions()
@@ -461,29 +475,30 @@ test_y_not_ok = SqlData().select_one_column_cond_null(table_name="test", column_
 
 
 # Style
-style.use('ggplot')
+# style.use('ggplot')
 
-# Plot figure mit zwei Subplot (axes) erzeugen
-fig, (ax1, ax2) = plt.subplots(2)
+# Plot figure with two Subplot (axes) erzeugen
+fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(15, 8))
+fig.suptitle("Result 'Hausarbeit' programming with python", fontsize=16)
+
 
 # Lineplot erzeugen
-ax1.plot(train_x, train_y1, label="Train 1", linewidth=2)
-ax1.plot(train_x, train_y2, label="Train 2", linewidth=2)
-ax1.plot(train_x, train_y3, label="Train 3", linewidth=2)
-ax1.plot(train_x, train_y4, label="Train 4", linewidth=2)
+ax1.plot(train_x, train_y1, label="Train 1", linewidth=1)
+ax1.plot(train_x, train_y2, label="Train 2", linewidth=1)
+ax1.plot(train_x, train_y3, label="Train 3", linewidth=1)
+ax1.plot(train_x, train_y4, label="Train 4", linewidth=1)
 
-ax2.plot(train_x, ideal_y1, label=f"{''.join(ideal_f[1:2])}", linewidth=2)
-ax2.plot(train_x, ideal_y2, label=f"{''.join(ideal_f[2:3])}", linewidth=2)
-ax2.plot(train_x, ideal_y3, label=f"{''.join(ideal_f[2:3])}", linewidth=2)
-ax2.plot(train_x, ideal_y4, label=f"{''.join(ideal_f[4:5])}", linewidth=2)
+ax2.plot(train_x, ideal_y1, label=f"{''.join(ideal_f[1:2])}", linewidth=1)
+ax2.plot(train_x, ideal_y2, label=f"{''.join(ideal_f[2:3])}", linewidth=1)
+ax2.plot(train_x, ideal_y3, label=f"{''.join(ideal_f[2:3])}", linewidth=1)
+ax2.plot(train_x, ideal_y4, label=f"{''.join(ideal_f[4:5])}", linewidth=1)
 
-ax2.scatter(test_x_ok, test_y_ok, label="Test Data")
-ax2.scatter(test_x_not_ok, test_y_not_ok, label="Test Data")
+ax2.scatter(test_x_ok, test_y_ok, label="Test OK", s=20, color="green")
+ax2.scatter(test_x_not_ok, test_y_not_ok, label="Test not-OK", s=15, marker="x", color="grey")
 
 # Legende hinzufügen
 ax1.legend()
 ax2.legend()
-
 
 # Grid hinzufügen
 ax1.grid(True, color="k")
@@ -491,8 +506,12 @@ ax2.grid(True, color="k")
 
 
 # Achsen beschriften
-plt.ylabel("y axis")
-plt.xlabel("x axis")
+fig.supylabel("y axis")
+fig.supxlabel("x axis")
+
+# Set Axes Titel
+ax1.set_title("Trainings Data")
+ax2.set_title("Ideal Functions & Test Data")
 
 # Plot anzeigen
 plt.show()
