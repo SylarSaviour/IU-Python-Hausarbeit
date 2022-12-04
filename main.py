@@ -15,36 +15,17 @@ This program consists of 3 Steps:
 2. Allocate the identified 4 ideal function to the data point of "test" with the lowes discrepancy.
 3. Visualize the Data
 
-The following criteria are considered:
-1. The criterion for selecting ideal functions for the training data set is
-    to minimize the sum of all squared y-deviations.
-2. The program uses the test data set (B) to validate the selection.
-    Here, for each x-y pair in the test data set, it checks whether the values fit the four ideal functions.
-2a. Use a criterion that ensures that the maximum deviation between the previously determined ideal function
-    and the test values does not exceed the maximum deviation between the training data (A)
-    and the four ideal functions from (C) by more than a factor of the square root of two (sqrt(2)).
-2b. If the test data is adaptable to the four functions you found,
-    save the corresponding deviations for each test data set.
-3. All data are visualized logically.
-4. Unit tests are written wherever possible.
-
 Structure of the Program:
-- Object Oriented (OOP)
-- 1 Inheritance
-- utilization of SQLite Database to store date
 - Standard and user defined exceptions
-- Use of libraries like pandas, matplotlib etc.
 - Unite test wherever this is suitable
-- Full program documentation using docstrings
-- Use Guit for version control
 """
 
 """
 With the following code we create an sqlite database in project folder /
-connect th program to the database and create sqlite tables /
+connect the program to the database and create sqlite tables /
 
 ! ! ! ATTENTION ! ! !
-Please store the "Datensatz" folder with the provides 3 cvs files "train", "ideal" and "test" in the project folder.
+Please store the "Datensatz" folder with the 3 cvs files "train.csv", "ideal.csv" and "test.csv" in the project folder.
 """
 
 
@@ -157,150 +138,6 @@ class SqlData:
             self.con.commit()
             # print(f"Data Update in table: '{table_name}' column: '{column_name_entry}' value: {value}")
 
-    def select_column_names(self, table_name):
-
-        """
-        with this function specific data from a database can be selected
-        :param table_name: name of the sql table as string
-        :return: list with column names
-        """
-        cursor = self.con.execute(f'select * from {table_name}')
-        names = [description[0] for description in cursor.description]
-
-        return names
-
-    def select_values(self, table_name, column_name, value):
-
-        """
-        with this function specific data from a database can be selected
-        :param table_name: name of the sql table as string
-        :param column_name: name of column condition as string
-        :param value: value inside the column condition
-        :return: ???????????????????????????????????????????????????
-        """
-
-        self.cur.execute(f"SELECT * FROM {table_name} WHERE {column_name}={value}")
-        self.cur.fetchall()
-
-    def select_one_column(self, table_name, column_name):
-
-        """
-        with this function a single column from a database can be selected
-        :param table_name: name of the sql table as string
-        :param column_name: name of column condition as string
-        :return: list of values of selected column
-        """
-
-        self.cur.execute(f"SELECT {column_name} FROM {table_name}")
-        result = self.cur.fetchall()
-        c_list = []
-
-        for row in result:
-            c_list += row
-
-        return c_list
-
-    def select_one_column_cond(self, table_name,
-                               column_name,
-                               column_name_condition="?", column_value_condition="?"):
-
-        """
-        with this function two columns from a database can be selected with a condition statement
-        :param table_name: name of the sql table as string
-        :param column_name: name of first column to be returned as string
-        :param column_name_condition: column name of condition as string
-        :param column_value_condition: column value as condition for selection
-        :return: list of values of selected column
-        """
-
-        self.cur.execute(f"SELECT {column_name} "
-                         f"FROM {table_name} "
-                         f"WHERE {column_name_condition}={column_value_condition}")
-
-        return self.cur.fetchall()
-
-    def select_one_column_cond_null(self, table_name, column_name, isnull, column_name_condition="?"):
-
-        """
-        with this function two columns from a database can be selected with a condition statement
-        :param table_name: name of the sql table as string
-        :param column_name: name of first column to be returned as string
-        :param isnull: requires 'true' or 'false' input to determine if Null values should be shown or not
-        :param column_name_condition: column name of condition as string
-        :return: list of NULL values of selected column
-        """
-
-        if isnull == "true":
-            self.cur.execute(f"SELECT {column_name} "
-                             f"FROM {table_name} "
-                             f"WHERE {column_name_condition} IS NULL")
-        elif isnull == "false":
-            self.cur.execute(f"SELECT {column_name} "
-                             f"FROM {table_name} "
-                             f"WHERE {column_name_condition} IS NOT NULL")
-        else:
-            raise ValueError("Wrong Argument: Must be 'true' or 'false'")
-
-        return self.cur.fetchall()
-
-    def select_two_column(self, table_name,
-                          column_name_1, column_name_2):
-
-        """
-        with this function two columns from a database can be selected
-        :param table_name: name of the sql table as string
-        :param column_name_1: name of first column to be returned as string
-        :param column_name_2: name of second column to be returned as string
-        :return: list of values of selected column
-        """
-
-        self.cur.execute(f"SELECT {column_name_1}, {column_name_2} "
-                             f"FROM {table_name}")
-
-        return self.cur.fetchall()
-
-    def select_two_column_cond(self, table_name,
-                               column_name_1, column_name_2,
-                               column_name_condition="?", column_value_condition="?"):
-
-        """
-        with this function two columns from a database can be selected with a condition statement
-        :param table_name: name of the sql table as string
-        :param column_name_1: name of first column to be returned as string
-        :param column_name_2: name of second column to be returned as string
-        :param column_name_condition: column name of condition as string
-        :param column_value_condition: column value as condition for selection
-        :return: list of values of selected column
-        """
-
-        self.cur.execute(f"SELECT {column_name_1}, "
-                         f"{column_name_2} FROM {table_name} "
-                         f"WHERE {column_name_condition}={column_value_condition}")
-
-        return self.cur.fetchall()
-
-    def select_table_values(self, table_name):
-
-        """
-        with this function data from an entire sql table can be selected
-        :param table_name: name of the table
-        :return: ?????????????????????????????????????????????????????
-        """
-
-        self.cur.execute(f"SELECT * FROM {table_name}")
-        return self.cur.fetchall()
-
-    def select_table_rows(self, table_name):
-
-        """
-        with this function data from an entire sql table can be selected
-        :param table_name: name of the table
-        :return: ?????????????????????????????????????????????????????
-        """
-
-        self.cur.execute(f"SELECT * FROM {table_name}")
-        return len(self.cur.fetchall())
-
     def pd_from_sql(self, table_name):
 
         """
@@ -310,6 +147,7 @@ class SqlData:
         """
 
         df = pd.read_sql(sql=table_name, con=self.con_str)
+
         return df
 
 
@@ -319,199 +157,236 @@ data.create_sql_table_from_csv(csv_path="Datensatz/train.csv", sql_table_name="t
 data.create_sql_table_from_csv(csv_path="Datensatz/ideal.csv", sql_table_name="ideal")
 data.create_sql_table_from_csv(csv_path="Datensatz/test.csv", sql_table_name="test")
 
-# Add new column to test table that did not exist before
+# Add new column to 'test' sqlite table that did not exist before
 data.add_table_column(table_name="test", new_column_name="Delta_Y", column_type="REAL")
 data.add_table_column(table_name="test", new_column_name="Nummer_der_Idealen_Funktion", column_type="TEXT")
 
+# Create pandas dataframes for calculations
+df_ideal = SqlData().pd_from_sql(table_name="ideal")
+df_train = SqlData().pd_from_sql(table_name="train")
+df_test = SqlData().pd_from_sql(table_name="test")
+df_4I = pd.DataFrame()
+df_4I["x"] = df_train["x"]
 
-class Compute(SqlData):
+"""
+With the following code we will do the calculations to identify the 4 ideal functions 
+and allocated them to the test data if this is applicable
+"""
+
+
+class Compute:
+
     """
     With this class we identify the 4 ideal functions and allocate the best ideal function to the test dataset
     """
 
-    # turn SQL tables in dataframes for further calculations
-    df_ideal = SqlData().pd_from_sql(table_name="ideal")
-    df_train = SqlData().pd_from_sql(table_name="train")
-    df_test = SqlData().pd_from_sql(table_name="test")
-    df_4I = pd.DataFrame()
-    df_4I["x"] = df_train["x"]
-
-    functions_train = list(df_train.columns)
-    functions_ideal = list(df_ideal.columns)
-
-    # df_ideal_help = pd.merge(df_test, df_ideal)
-    # df_ideal_help = df_ideal_help.drop(columns=["y", "Delta_Y", "Nummer_der_Idealen_Funktion"], axis=1)
-    # function_ideal_help = list(df_ideal_help.columns)
-
-    def get_4_ideal_functions(self):
+    def get_4_ideal_functions(self, df_1, df_2):
 
         """
         with this function the 4 ideal functions from ideal.csv are identified
-        :param ?????????????????????????????????????????????????????
+        :param df_1: First dataframe to compare as string. E.g. 'df_train'
+        :param df_2: First dataframe to compare as string. E.g. 'df_ideal'
         :return: pandas dataframe 'df_4I' with 4 ideal functions
         """
 
-        # Get number of columns to iterate through
-        row_count = SqlData().select_table_rows(table_name="train")
+        # Get functions names (column names) from dataframes as well as amount of function entries.
+        functions_train = list(df_1.columns)[1:]
+        functions_ideal = list(df_2.columns)[1:]
+        row_count = len(df_train.index)
 
-        for t in self.functions_train[1:]:
-            threshold = 10
+        # Iterate through all 'train' functions to identify the "ideal" function
+        for t in functions_train:
 
-            for i in self.functions_ideal[1:]:
+            # As multiple functions can fit in the range of sqrt2 difference, the 'threshold' will store the lowes
+            # total difference to determine the best ideal function for a train function.
+            # 100 is just the start value
+            threshold = 100
+
+            # Iterate through all 'ideal' functions for on 'train' function
+            for i in functions_ideal:
                 function_train = t
                 function_check = i
 
-                self.df_train['check'] = np.where((self.df_train[function_train] - self.df_ideal[function_check]
-                                                   <= math.sqrt(2)) &
-                                                  (self.df_train[function_train] - self.df_ideal[function_check]
-                                                   >= (math.sqrt(2)) * -1),
-                                                  'True', 'False')
+                # Check if a datapoint of an 'ideal' function is within a difference of sqrt(2) and write 'True' in and
+                # new created column called 'check'.
+                df_train['check'] = np.where((df_train[function_train] - df_ideal[function_check]
+                                              <= math.sqrt(2)) &
+                                             (df_train[function_train] - df_ideal[function_check]
+                                              >= (math.sqrt(2)) * -1), 'True', 'False')
 
-                self.df_train['dif'] = self.df_train[function_train] - self.df_ideal[function_check]
+                # Store the difference of every datapoint in a new column called 'dif'
+                df_train['dif'] = df_train[function_train] - df_ideal[function_check]
 
-                result = self.df_train[self.df_train['check'] == 'True'].count()
-                sum_dif = abs(self.df_train['dif'].sum())
+                # Count how many times an ideal function was within the range of sqrt(2)
+                # with they keyword 'True' in column 'check
+                result = df_train[df_train['check'] == 'True'].count()
 
+                # sum-up all differences of the 'ideal' function compared to the 'train' function
+                sum_dif = abs(df_train['dif'].sum())
+
+                # Check if the 'ideal' functions has all datapoints with 'check' to be considered as ideal function
                 if result['check'] == row_count:
 
+                    # check, if the total difference is smaller than the threshold
+                    # if this is the case, overwrite the threshold with the own value to be considered as currently the
+                    # best ideal function for the training functions
+                    # if ideal function is not smaller than the threshold, it is not considered anymore
                     if sum_dif < threshold:
                         threshold = sum_dif
                         ideal = i
-                        self.df_4I[ideal] = self.df_ideal[ideal]
+                        df_4I[ideal] = df_ideal[ideal]
                     else:
                         pass
                 else:
                     pass
-        return self.df_4I
 
-    def ideal_2_test(self):
+        return df_4I
+
+    def ideal_2_test(self, df_1, df_2, table_name_update, column_1_update, column_2_update):
 
         """
-        with this function the best ideal function will be  allocated to the test sql database
-        :param ?????????????????????????????????????????????????????
+        With this function the best ideal function will be allocated to the test data and sql_database will be updated
+        :param df_1: Dataframe that need to be tested e.g. "df_test"
+        :param df_2: Dataframe to be checked against d.g. "df_ideal_4f"
+        :param table_name_update: This table will be updated e.g. 'test'
+        :param column_1_update: name of column to be updated e.g. 'Delta_Y'
+        :param column_2_update: name of the column to be updated e.g. 'Nummer_der_Idealen_Funktion'
         :return: updated sql 'test' table with ideal function and Y delta values
         """
 
-        df_ideal_help = pd.merge(self.df_test, df_ideal_4f)
-        df_ideal_help = df_ideal_help.drop(columns=["y", "Delta_Y", "Nummer_der_Idealen_Funktion"], axis=1)
-        function_ideal_help = list(df_ideal_help.columns)
-        row_count = SqlData().select_table_rows(table_name="test")
+        # Determine the amount of lines for the interation
+        row_count = len(df_1.index)
 
-        count = 0
+        # Check every line in the test data
         for f in range(row_count):
-            row = self.df_test.iloc[f]
+            row = df_test.iloc[f]
             x = row["x"]
             y = row["y"]
-            id_column = df_ideal_4f.loc[df_ideal_4f['x'] == x]
-            threshold = 1
+            id_column = df_2.loc[df_2['x'] == x]
+            threshold = 100
 
-            for i in function_ideal_help[1:]:
+            # Iterate to all 4 ideal function to find the best with difference smaller than sqrt2
+            for i in ideal_4[1:]:
                 id_y = id_column[i]
                 dif = abs(id_y - y)
                 dif_ = float(dif.to_string(index=False))
                 if dif_ < (math.sqrt(2)):
                     if dif_ < threshold:
-                        count += 1
                         threshold = dif_
 
                         # update difference in SQL test date column "Delta_Y"
-                        SqlData().update_values(table_name="test",
+                        SqlData().update_values(table_name=table_name_update,
                                                 column_value_x=x, column_value_y=y,
-                                                column_name_entry="Delta_Y", value=dif_)
+                                                column_name_entry=column_1_update, value=dif_)
 
                         # update ideal function name in SQL test date column "Nummer_der_Idealen_Funktion"
-                        SqlData().update_values(table_name="test",
+                        SqlData().update_values(table_name=table_name_update,
                                                 column_value_x=x, column_value_y=y,
-                                                column_name_entry="Nummer_der_Idealen_Funktion", value=i[1:])
+                                                column_name_entry=column_2_update, value=i[1:])
                     else:
                         pass
-        print(f"Done {count} test functions allocated to one of the 4 ideal functions"
-              f"{row_count-count} test functions out of range (sqr2)")
 
-# Identify the 4 ideal functions
-df_ideal_4f = Compute().get_4_ideal_functions()
+        print("Ideal functions have been allocated and written to 'test' sqlite table")
 
-# Create new SQL Table with 4 ideal functions
-ideal_SQL = SqlData().create_sql_table_from_dataframe(dataframe=df_ideal_4f, sql_table_name="ideal_4")
+    def list_string_in_int(self, string_list):
 
-# list of the f ideal functions
-ideal_f = SqlData().select_column_names(table_name="ideal_4")
-# Allocate ideal function and delta value to test data and update sql table
-comp = Compute().ideal_2_test()
+        int_list = []
+        for x in string_list[1:]:
+            number = int(''.join(x)[1:])
+            int_list.append(number)
 
+        return int_list
+
+
+# Identify the 4 ideal functions and put them in a list
+df_ideal_4f = Compute().get_4_ideal_functions(df_1=df_train, df_2=df_ideal)
+ideal_4 = list(df_ideal_4f.columns)
+ideal_4_int = Compute().list_string_in_int(string_list=ideal_4)
+print(f"Ideal functions for train functions identified:\n"
+      f" Train 1 = Ideal {ideal_4_int[0]}\n"
+      f" Train 2 = Ideal {ideal_4_int[1]}\n"
+      f" Train 3 = Ideal {ideal_4_int[2]}\n"
+      f" Train 4 = Ideal {ideal_4_int[3]}")
+
+# Create new SQL Table with the 4 ideal functions
+SqlData().create_sql_table_from_dataframe(dataframe=df_ideal_4f, sql_table_name="ideal_4")
+
+# Allocate ideal function and delta value to test data and update 'test' sql table and 'test' dataframe
+Compute().ideal_2_test(df_1=df_test, df_2=df_ideal_4f, table_name_update="test",
+                       column_1_update="Delta_Y", column_2_update="Nummer_der_Idealen_Funktion")
+df_test = SqlData().pd_from_sql(table_name="test")
 
 """
-VISUALIZATION
+With the following code we will visualize the 4 'train' functions as well as the 4 'ideal'
+functions including there identify test data
 """
 
-# test function 1 x/y values
-train_x = SqlData().select_one_column(table_name="train", column_name="x")
-train_y1 = SqlData().select_one_column(table_name="train", column_name="y1")
-train_y2 = SqlData().select_one_column(table_name="train", column_name="y2")
-train_y3 = SqlData().select_one_column(table_name="train", column_name="y3")
-train_y4 = SqlData().select_one_column(table_name="train", column_name="y4")
 
-# ideal function 1 x/y values
-ideal_x = SqlData().select_one_column(table_name="ideal_4", column_name="x")
-ideal_y1 = SqlData().select_one_column(table_name="ideal_4", column_name=f"{''.join(ideal_f[1:2])}")
-ideal_y2 = SqlData().select_one_column(table_name="ideal_4", column_name=f"{''.join(ideal_f[2:3])}")
-ideal_y3 = SqlData().select_one_column(table_name="ideal_4", column_name=f"{''.join(ideal_f[3:4])}")
-ideal_y4 = SqlData().select_one_column(table_name="ideal_4", column_name=f"{''.join(ideal_f[4:5])}")
+class Visualize:
+    """
+    With this class we visualize proved data.
+    """
 
-# test function 1 x/y values
-test_x_ok = SqlData().select_one_column_cond_null(table_name="test", column_name="x",
-                                                  column_name_condition="Nummer_der_Idealen_Funktion",
-                                                  isnull="false")
-test_y_ok = SqlData().select_one_column_cond_null(table_name="test", column_name="y",
-                                                  column_name_condition="Nummer_der_Idealen_Funktion",
-                                                  isnull="false",)
+    def __init__(self):
 
-test_x_not_ok = SqlData().select_one_column_cond_null(table_name="test", column_name="x",
-                                                      column_name_condition="Nummer_der_Idealen_Funktion",
-                                                      isnull="true")
-test_y_not_ok = SqlData().select_one_column_cond_null(table_name="test", column_name="y",
-                                                      column_name_condition="Nummer_der_Idealen_Funktion",
-                                                      isnull="true",)
+        # Style
+        # plt.style.use('dark_background')
+
+        # Create plot figure with two Subplot (axes)
+        self.fig, (self.ax1, self.ax2) = plt.subplots(ncols=2, figsize=(15, 8))
+        self.fig.suptitle("Result 'Hausarbeit' programming with python", fontsize=16)
+
+        # Add grid to Axes
+        self.ax1.grid(True, color="k")
+        self.ax2.grid(True, color="k")
+
+        # Aces label of the whole Figure
+        self.fig.supylabel("y axis")
+        self.fig.supxlabel("x axis")
+
+        # Set Axes titles
+        self.ax1.set_title("Trainings Data")
+        self.ax2.set_title("Ideal Functions & Test Data")
 
 
-# Style
-# style.use('ggplot')
+class Axes(Visualize):
 
-# Plot figure with two Subplot (axes) erzeugen
-fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(15, 8))
-fig.suptitle("Result 'Hausarbeit' programming with python", fontsize=16)
+    def create_axes(self):
+        # Line diagrams for  "train" functions on Axes 1
+        self.ax1.plot(df_train[["x"]].to_numpy(),
+                      df_train[["y1", "y2", "y3", "y4"]].to_numpy(),
+                      label=["Train 1", "Train 2", "Train 3", "Train 4"], linewidth=2)
+
+        # line diagrams for the identified 4 "ideal" functions on Axes_2
+        self.ax2.plot(df_ideal_4f[["x"]].to_numpy(),
+                      df_ideal_4f[ideal_4[1:]].to_numpy(),
+                      label=[f"Ideal {ideal_4[1]}", f"Ideal {ideal_4[2]}",
+                             f"Ideal {ideal_4[3]}", f"Ideal {ideal_4[4]}"], linewidth=2)
+
+        # scattered diagrams for every entry of "test" that has been allocated one ideal functions
+        self.ax2.scatter(df_test["x"].where(df_test["Nummer_der_Idealen_Funktion"] == ideal_4[1][1:]),
+                         df_test["y"].where(df_test["Nummer_der_Idealen_Funktion"] == ideal_4[1][1:]),
+                         label="Test1", s=20, color="blue")
+        self.ax2.scatter(df_test["x"].where(df_test["Nummer_der_Idealen_Funktion"] == ideal_4[2][1:]),
+                         df_test["y"].where(df_test["Nummer_der_Idealen_Funktion"] == ideal_4[2][1:]),
+                         label="Test2", s=20, color="orange")
+        self.ax2.scatter(df_test["x"].where(df_test["Nummer_der_Idealen_Funktion"] == ideal_4[3][1:]),
+                         df_test["y"].where(df_test["Nummer_der_Idealen_Funktion"] == ideal_4[3][1:]),
+                         label="Test3", s=20, color="green")
+        self.ax2.scatter(df_test["x"].where(df_test["Nummer_der_Idealen_Funktion"] == ideal_4[4][1:]),
+                         df_test["y"].where(df_test["Nummer_der_Idealen_Funktion"] == ideal_4[4][1:]),
+                         label="Test4", s=20, color="red")
+
+        # scattered diagrams for every entry of "test" has not been allocated to an ideal functions
+        self.ax2.scatter(df_test["x"].where(df_test["Nummer_der_Idealen_Funktion"].isnull()),
+                         df_test["y"].where(df_test["Delta_Y"].isnull()),
+                         label="Out", s=15, marker="x", color="grey")
+
+        # Legend added to both Axes
+        self.ax1.legend()
+        self.ax2.legend()
+
+        return plt.show()
 
 
-# Lineplot erzeugen
-ax1.plot(train_x, train_y1, label="Train 1", linewidth=1)
-ax1.plot(train_x, train_y2, label="Train 2", linewidth=1)
-ax1.plot(train_x, train_y3, label="Train 3", linewidth=1)
-ax1.plot(train_x, train_y4, label="Train 4", linewidth=1)
-
-ax2.plot(train_x, ideal_y1, label=f"{''.join(ideal_f[1:2])}", linewidth=1)
-ax2.plot(train_x, ideal_y2, label=f"{''.join(ideal_f[2:3])}", linewidth=1)
-ax2.plot(train_x, ideal_y3, label=f"{''.join(ideal_f[2:3])}", linewidth=1)
-ax2.plot(train_x, ideal_y4, label=f"{''.join(ideal_f[4:5])}", linewidth=1)
-
-ax2.scatter(test_x_ok, test_y_ok, label="Test OK", s=20, color="green")
-ax2.scatter(test_x_not_ok, test_y_not_ok, label="Test not-OK", s=15, marker="x", color="grey")
-
-# Legende hinzufügen
-ax1.legend()
-ax2.legend()
-
-# Grid hinzufügen
-ax1.grid(True, color="k")
-ax2.grid(True, color="k")
-
-
-# Achsen beschriften
-fig.supylabel("y axis")
-fig.supxlabel("x axis")
-
-# Set Axes Titel
-ax1.set_title("Trainings Data")
-ax2.set_title("Ideal Functions & Test Data")
-
-# Plot anzeigen
-plt.show()
+Axes().create_axes()
