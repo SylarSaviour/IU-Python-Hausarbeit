@@ -8,19 +8,23 @@ import math
 import sqlalchemy as db
 import sqlite3
 import matplotlib.pyplot as plt
+import sys
+import traceback
+from pathlib import Path
 
 """
 This program consists of 3 Steps:
-1. Uses four "train" datasets (A) to find the four best fits from another dataset of 50 "ideal" functions (C) /
-2. Allocate the identified 4 ideal function to the data point of "test" with the lowes discrepancy.
+1. Turn the three provided csv files into sqlite tables and add additional required functions
+2. Analyse datasets: Use "train" datasets to find the four best fits from the "ideal" datasets, 
+                     then use the identified 4 "ideal" functions and allocate them to the "test" dataset.
 3. Visualize the Data
 
 Structure of the Program:
-- Standard and user defined exceptions
 - Unite test wherever this is suitable
 """
 
 """
+1_STEP
 With the following code we create an sqlite database in project folder /
 connect the program to the database and create sqlite tables /
 
@@ -35,9 +39,14 @@ class SqlData:
     """
 
     db_name = "Hausarbeit.db"
+    db_path = Path(db_name)
 
-    sqlite3.connect(db_name)
-    print(f"Database '{db_name}' created/connected")
+    if db_path.is_file():
+        sqlite3.connect(db_name)
+        print(f"Database '{db_name}' connected")
+    else:
+        sqlite3.connect(db_name)
+        print(f"Database '{db_name}' created & connected")
 
     # connect database using sqlite3 to modify existing sql tables
     con = sqlite3.connect(db_name)
@@ -51,59 +60,84 @@ class SqlData:
     def create_sql_table_from_csv(self, csv_path, sql_table_name):
 
         """
-        with this function a sql table can be created from a csv file
+        with this function a sql table will be created from a csv file
          :param csv_path: path of the csv file as string
          :param sql_table_name: name of the table that will be created as string
-         :return: csv file will be transformed into a sql_table
+         :return: sqlite table created
         """
 
+        # get data from csv and turn it into a pandas dataframe
         csv_data = pd.read_csv(f'{csv_path}')
+
         try:
+            # turn the created pandas dataframe into a sqlite database
             csv_data.to_sql(sql_table_name, self.engine, index=False, if_exists="fail")
             print(f"tabel '{sql_table_name}' has been created")
-            pass
+            return True
         except:
-            print(f"SQL table '{sql_table_name}' already exist")
-            pass
+            # catch the ValueError in case the table already exists
+            exception_type, exception_value, exception_traceback = sys.exc_info()
+            file_name, line_number, procedure_name, line_code = traceback.extract_tb(exception_traceback)[-1]
+            if ValueError:
+                print(f"SQL table '{sql_table_name}' already exist")
+                return True
+            else:
+                # if another error occurs, print the error type and line
+                print(f"Error {exception_type} on line {line_number}")
+                return False
         finally:
             pass
 
     def create_sql_table_from_dataframe(self, dataframe, sql_table_name):
 
         """
-        with this function a sql table can be created from a csv file
+        with this function a sql table will be created from a csv file
          :param dataframe: dataframe object to be transformed
          :param sql_table_name: name of the table that will be created as string
-         :return: dataframe file will be transformed into a sql_table
+         :return: Boolean if sqlite table is created
         """
 
         try:
+            # turn pandas dataframe into a sqlite database
             dataframe.to_sql(sql_table_name, self.engine, index=False, if_exists="fail")
             print(f"tabel '{sql_table_name}' has been created")
-            pass
+            return True
         except:
-            print(f"SQL table '{sql_table_name}' already exist")
-            pass
+            # catch the ValueError in case the table already exists
+            if ValueError:
+                print(f"SQL table '{sql_table_name}' already exist")
+                return True
+            else:
+                # if another error occurs, print the error type and line
+                print(f"Error {traceback.exception_type} on line {traceback.line_number}")
+                return False
         finally:
             pass
 
     def add_table_column(self, table_name, new_column_name, column_type):
 
         """
-        with this function new columns can be added to an existing sqlite database
+        with this function new columns will be added to an existing sqlite database
         :param table_name: sql table name as string
         :param new_column_name: name of the new column as string
         :param column_type: datatype of the new column as string (NULL, INTEGER, REAL, TEXT BLOB)
-        :return: new column in table if not already exist
+        :return: Boolean if column is inserted in table
         """
 
         try:
+            # Add the defined column to the table
             self.cur.execute(f"ALTER TABLE {table_name} ADD {new_column_name} {column_type}")
             print(f"new column '{new_column_name}' in table '{table_name}' has been created")
-            pass
+            return True
         except:
-            print(f"new column '{new_column_name}' in table '{table_name}' already exist")
-            pass
+            # catch the ValueError in case the column already exists
+            if ValueError:
+                print(f"new column '{new_column_name}' in table '{table_name}' already exist")
+                return True
+            else:
+                # if another error occurs, print the error type and line
+                print(f"Error {traceback.exception_type} on line {traceback.line_number}")
+                return False
         finally:
             pass
 
@@ -113,7 +147,7 @@ class SqlData:
                       column_name_y='y', column_value_y=None):
 
         """
-        with this function data can be inserted in a sqlite database table
+        with this function data will be inserted in a sqlite database table
         :param table_name: sql table name to be updated as string
         :param column_name_entry: sql table column to be updated as string
         :param value: value to be updated
@@ -121,7 +155,7 @@ class SqlData:
         :param column_value_x: default value = 'x' conditions of row to be updated column value
         :param column_name_y: conditions of row to be updated column name
         :param column_value_y: conditions of row to be updated column value
-        :return: sql table is updated
+        :return: Boolean if sqlite table is updated
         """
 
         self.cur.execute(f"SELECT * FROM {table_name} WHERE {column_name_x}={column_value_x}")
@@ -129,6 +163,7 @@ class SqlData:
 
         if not result:
             raise ValueError("no matching criteria to update values in db")
+            return False
         else:
             self.cur.execute(
                 f"UPDATE {table_name} "
@@ -138,6 +173,8 @@ class SqlData:
             self.con.commit()
             # print(f"Data Update in table: '{table_name}' column: '{column_name_entry}' value: {value}")
 
+        return True
+
     def pd_from_sql(self, table_name):
 
         """
@@ -146,7 +183,17 @@ class SqlData:
         :return: pandas dataframe "df" from sql table
         """
 
-        df = pd.read_sql(sql=table_name, con=self.con_str)
+        try:
+            # create dataframe from sqlite table
+            df = pd.read_sql(sql=table_name, con=self.con_str)
+
+        except:
+            # raise an ValueError in case table does not exist
+            raise ValueError(f"sqlite table '{table_name}' does not exist")
+            return False
+
+        finally:
+            pass
 
         return df
 
@@ -174,8 +221,7 @@ and allocated them to the test data if this is applicable
 """
 
 
-class Compute:
-
+class AnalyseData:
     """
     With this class we identify the 4 ideal functions and allocate the best ideal function to the test dataset
     """
@@ -299,9 +345,9 @@ class Compute:
 
 
 # Identify the 4 ideal functions and put them in a list
-df_ideal_4f = Compute().get_4_ideal_functions(df_1=df_train, df_2=df_ideal)
+df_ideal_4f = AnalyseData().get_4_ideal_functions(df_1=df_train, df_2=df_ideal)
 ideal_4 = list(df_ideal_4f.columns)
-ideal_4_int = Compute().list_string_in_int(string_list=ideal_4)
+ideal_4_int = AnalyseData().list_string_in_int(string_list=ideal_4)
 print(f"Ideal functions for train functions identified:\n"
       f" Train 1 = Ideal {ideal_4_int[0]}\n"
       f" Train 2 = Ideal {ideal_4_int[1]}\n"
@@ -312,8 +358,8 @@ print(f"Ideal functions for train functions identified:\n"
 SqlData().create_sql_table_from_dataframe(dataframe=df_ideal_4f, sql_table_name="ideal_4")
 
 # Allocate ideal function and delta value to test data and update 'test' sql table and 'test' dataframe
-Compute().ideal_2_test(df_1=df_test, df_2=df_ideal_4f, table_name_update="test",
-                       column_1_update="Delta_Y", column_2_update="Nummer_der_Idealen_Funktion")
+AnalyseData().ideal_2_test(df_1=df_test, df_2=df_ideal_4f, table_name_update="test",
+                           column_1_update="Delta_Y", column_2_update="Nummer_der_Idealen_Funktion")
 df_test = SqlData().pd_from_sql(table_name="test")
 
 """
@@ -328,7 +374,6 @@ class Visualize:
     """
 
     def __init__(self):
-
         # Style
         # plt.style.use('dark_background')
 
@@ -351,7 +396,17 @@ class Visualize:
 
 class Axes(Visualize):
 
+    """
+    asdfasdfasdf
+    """
+
     def create_axes(self):
+
+        """
+
+        :return:
+        """
+
         # Line diagrams for  "train" functions on Axes 1
         self.ax1.plot(df_train[["x"]].to_numpy(),
                       df_train[["y1", "y2", "y3", "y4"]].to_numpy(),
@@ -380,7 +435,7 @@ class Axes(Visualize):
         # scattered diagrams for every entry of "test" has not been allocated to an ideal functions
         self.ax2.scatter(df_test["x"].where(df_test["Nummer_der_Idealen_Funktion"].isnull()),
                          df_test["y"].where(df_test["Delta_Y"].isnull()),
-                         label="Out", s=15, marker="x", color="grey")
+                         label="NULL", s=15, marker="x", color="grey")
 
         # Legend added to both Axes
         self.ax1.legend()
